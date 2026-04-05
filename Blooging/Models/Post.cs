@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Blooging.Models
 {
@@ -23,5 +24,16 @@ namespace Blooging.Models
 
         [DataType(DataType.Date)]
         public DateTime PublishedDate { get; set; }= DateTime.Now;
+
+
+        [ForeignKey("Category")]
+        public int CategoryId { get; set; }
+
+        public Category Category { get; set; }
+
+
+        public ICollection<Comment> Comments { get; set; }  
+
+
     }
 }
