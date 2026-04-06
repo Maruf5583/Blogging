@@ -27,6 +27,7 @@ namespace Blooging.Models
 
 
         [ForeignKey("Category")]
+        [Display(Name = "Category")]
         public int CategoryId { get; set; }
 
         public Category Category { get; set; }
