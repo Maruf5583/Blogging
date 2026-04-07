@@ -1,4 +1,5 @@
 ﻿using Blooging.Data;
+using Blooging.Models;
 using Blooging.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -70,6 +71,64 @@ namespace Blooging.Controllers
         }
 
 
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var postViewModel = new PostviewModel
+            {
+                Categories = new SelectList(_context.Categories, "Id", "Name"),
+                post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == id),
+            };
+            return View(postViewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(PostviewModel postViewModel)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(postViewModel);
+            }
+
+            var postFromDb = await _context.Posts.AsNoTracking().FirstOrDefaultAsync(
+                p => p.Id == postViewModel.post.Id);
+
+            if (postFromDb == null)
+            {
+                return NotFound();
+            }
+
+            if (postViewModel.FeaturesImage != null)
+            {
+                var inputFileExtension = Path.GetExtension(postViewModel.FeaturesImage.FileName).ToLower();
+                bool isAllowed = _allowedExtension.Contains(inputFileExtension);
+                if (!isAllowed)
+                {
+                    ModelState.AddModelError("Image", "Invalid image format. Allowed formats are .jpg, .jpeg, .png");
+                    return View(postViewModel);
+                }
+
+                var existingFilePath = Path.Combine(_webHostEnvironment.WebRootPath, "images",
+                    Path.GetFileName(postFromDb.FeaturesImagePath));
+                if (System.IO.File.Exists(existingFilePath))
+                {
+                    System.IO.File.Delete(existingFilePath);
+                }
+                postViewModel.post.FeaturesImagePath = await UploadFileToFolder(postViewModel.FeaturesImage);
+            }
+            else
+            {
+                postViewModel.post.FeaturesImagePath = postFromDb.FeaturesImagePath;
+            }
+
+            _context.Posts.Update(postViewModel.post);
+            await _context.SaveChangesAsync();
+            return RedirectToAction("Index");
+        }
+
+
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Index(int? categoryId)
@@ -87,6 +146,77 @@ namespace Blooging.Controllers
         }
 
 
+        [HttpGet]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var postFromDb = await _context.Posts.FindAsync(id);
+            if (postFromDb == null)
+            {
+                return NotFound();
+            }
+            return View(postFromDb);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteConfirm(int id)
+        {
+            if (id < 0)
+            {
+                return BadRequest();
+            }
+
+            var postFromDb = await _context.Posts.FindAsync(id);
+            if (postFromDb == null)
+            {
+                return NotFound();
+            }
+            if (!string.IsNullOrEmpty(postFromDb.FeaturesImagePath))
+            {
+                var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "images", Path.GetFileName(postFromDb.FeaturesImagePath));
+                if (System.IO.File.Exists(imagePath))
+                {
+                    System.IO.File.Delete(imagePath);
+                }
+            }
+            _context.Posts.Remove(postFromDb);
+            await _context.SaveChangesAsync();
+            return RedirectToAction("Index");
+        }
+
+
+        [AllowAnonymous]
+        public IActionResult Details(int id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var post = _context.Posts.Include(p => p.Category).Include(p => p.Comments)
+                .FirstOrDefault(p => p.Id == id);
+
+            if (post == null)
+            {
+                return NotFound();
+            }
+            return View(post);
+
+        }
+
+        public JsonResult AddComment  ([FromBody]Comment comment)
+        {
+            comment.CommentDate = DateTime.Now;
+            _context.Comments.Add(comment);
+            _context.SaveChanges();
+
+            return Json(new
+            {
+                userName = comment.UserName,
+                commentDate = comment.CommentDate.ToString("yyyy-MM-dd HH:mm:ss"),
+                content = comment.Content
+            });
+           
+        }
 
         private async Task<string> UploadFileToFolder(IFormFile file)
         {

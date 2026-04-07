@@ -17,12 +17,11 @@
         }
     }
 </div>
-@if (User.IsInRole("Admin"))
-{
+
     <div class="text-end my-2">
         <a asp-action="Create" class="btn btn-primary rounded ">Create New Post</a>
     </div>
-}
+
 
 <!-- Displaying Blog Posts in Cards -->
 <div class="row row-cols-1 row-cols-md-3 g-4">
@@ -47,7 +46,7 @@
                 </div>
 
                 <div class="card-footer d-flex justify-content-between align-items-center">
-                    <a asp-action="Detail" asp-route-id="@post.Id" class="btn btn-primary btn-sm">Read More</a>
+                    <a asp-action="Details" asp-route-id="@post.Id" class="btn btn-primary btn-sm">Read More</a>
                     <div class="text-end">
                         <small class="text-muted">By @post.Author</small>
                     </div>
